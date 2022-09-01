@@ -7,12 +7,11 @@ const {
 const { ZERO_ADDRESS } = constants;
 
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
-const {
-  shouldSupportInterfaces,
-} = require("../../utils/introspection/SupportsInterface.behavior");
+const { shouldSupportInterfaces } = require("./SupportsInterface.behavior");
 
-const ERC1155ReceiverMock = artifacts.require("ERC1155ReceiverMock");
+let ERC1155ReceiverMock;
 
 function shouldBehaveLikeERC1155([
   minter,
@@ -33,6 +32,11 @@ function shouldBehaveLikeERC1155([
   const RECEIVER_BATCH_MAGIC_VALUE = "0xbc197c81";
 
   describe("like an ERC1155", function () {
+    before(async () => {
+      ERC1155ReceiverMock = await ethers.getContractFactory(
+        "ERC1155ReceiverMock"
+      );
+    });
     describe("balanceOf", function () {
       it("reverts when queried about the zero address", async function () {
         await expectRevert(
