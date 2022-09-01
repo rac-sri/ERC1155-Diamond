@@ -4,25 +4,17 @@ pragma solidity ^0.8.0;
 import "./interface/IERC1155.sol";
 import "./interface/IERC1155Receiver.sol";
 import "./interface/IERC1155MetadataURI.sol";
+import "./Address.sol";
 import "./ERC1155Storage.sol";
 import "./Context.sol";
 import "./ERC165.sol";
 
 
-contract ERC1155 is Context, IERC1155, IERC1155MetadataURI {
+contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
 
     using ERC1155Storage for ERC1155Storage.Layout;
-    
-    /**
-     * @dev See {IERC1155MetadataURI-uri}.
-     *
-     * This implementation returns the same URI for *all* token types. It relies
-     * on the token type ID substitution mechanism
-     * https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
-     *
-     * Clients calling this function must replace the `\{id\}` substring with the
-     * actual token type ID.
-     */
+    using Address for address;
+
     function uri(uint256) public view virtual override returns (string memory) {
         return ERC1155Storage.layout()._uri;
     }
