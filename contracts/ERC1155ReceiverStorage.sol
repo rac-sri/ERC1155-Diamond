@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-library ERC1155Storage {
+library ERC1155ReceiverStorage {
     // Bypass for a `--via-ir` bug (https://github.com/chiru-labs/ERC721A/pull/364).
     struct TokenApprovalRef {
         address value;
@@ -12,18 +12,13 @@ library ERC1155Storage {
     // =============================================================
     //                            STORAGE
     // =============================================================
-
-    // Mapping from token ID to account balances
-         mapping(uint256 => mapping(address => uint256))  _balances;
-
-    // Mapping from account to operator approvals
-    mapping(address => mapping(address => bool))  _operatorApprovals;
-
-    // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
-    string  _uri;
+    bytes4  _recRetval;
+    bool  _recReverts;
+    bytes4  _batRetval;
+    bool  _batReverts;
     }
 
-    bytes32 internal constant STORAGE_SLOT = keccak256('ERC1155.contracts.storage.ERC1155');
+    bytes32 internal constant STORAGE_SLOT = keccak256('ERC1155.receiver.contracts.storage.ERC1155');
 
     function layout() internal pure returns (Layout storage l) {
         bytes32 slot = STORAGE_SLOT;

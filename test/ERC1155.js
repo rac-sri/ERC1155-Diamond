@@ -15,6 +15,7 @@ const { shouldBehaveLikeERC1155 } = require("./ERC1155.behavior");
 describe("ERC1155", () => {
   let ERC1155Mock;
   let accounts = [];
+  let signer, signer2;
   let operator, tokenHolder, tokenBatchHolder, otherAccounts;
 
   const initialURI = "https://token-cdn-domain/{id}.json";
@@ -22,7 +23,7 @@ describe("ERC1155", () => {
   beforeEach(async function () {
     ERC1155Mock = await ethers.getContractFactory("ERC1155Mock");
     const accountSigners = await ethers.getSigners();
-
+    [signer, signer2] = accountSigners;
     for (let i = 0; i < accountSigners.length; ++i) {
       accounts.push(await accountSigners[i].getAddress());
     }
@@ -32,10 +33,6 @@ describe("ERC1155", () => {
     ERC1155Mock = await ERC1155Mock.deploy();
 
     await ERC1155Mock.setURI(initialURI);
-  });
-
-  it("should behave like erc 1155", () => {
-    shouldBehaveLikeERC1155(otherAccounts);
   });
 
   describe("internal functions", function () {
@@ -86,10 +83,6 @@ describe("ERC1155", () => {
         });
 
         it("credits the minted amount of tokens", async function () {
-          console.log(
-            await ERC1155Mock.balanceOf(tokenHolder, tokenId),
-            mintAmount
-          );
           expect(await ERC1155Mock.balanceOf(tokenHolder, tokenId)).to.equal(
             mintAmount
           );
@@ -285,10 +278,6 @@ describe("ERC1155", () => {
     const firstTokenID = BigNumber.from("42");
     const secondTokenID = BigNumber.from("1337");
 
-    it("emits no URI event in constructor", async function () {
-      await expectEvent.notEmitted.inConstruction(ERC1155Mock, "URI");
-    });
-
     it("sets the initial URI for all token types", async function () {
       expect(await ERC1155Mock.uri(firstTokenID)).to.be.equal(initialURI);
       expect(await ERC1155Mock.uri(secondTokenID)).to.be.equal(initialURI);
@@ -299,8 +288,7 @@ describe("ERC1155", () => {
 
       it("emits no URI event", async function () {
         const receipt = await ERC1155Mock.setURI(newURI);
-
-        expectEvent.notEmitted(receipt, "URI");
+        expect(receipt).to.not.emit("URI");
       });
 
       it("sets the new URI for all token types", async function () {
@@ -310,5 +298,9 @@ describe("ERC1155", () => {
         expect(await ERC1155Mock.uri(secondTokenID)).to.be.equal(newURI);
       });
     });
+  });
+
+  it("should behave like erc 1155", () => {
+    shouldBehaveLikeERC1155(signer, signer2, otherAccounts);
   });
 });
