@@ -429,18 +429,15 @@ function shouldBehaveLikeERC1155(
           });
 
           it("calls onERC1155Received", async function () {
-            await expectEvent.inTransaction(
-              this.transferReceipt.tx,
-              ERC1155Mock,
-              "Received",
-              {
-                operator: multiTokenHolder,
-                from: multiTokenHolder,
-                id: firstTokenId,
-                value: firstAmount,
-                data: null,
-              }
-            );
+            expect(this.transferReceipt)
+              .to.emit("Received")
+              .withArgs(
+                multiTokenHolder.address,
+                multiTokenHolder.address,
+                firstTokenId,
+                firstAmount,
+                null
+              );
           });
         });
 
@@ -468,18 +465,15 @@ function shouldBehaveLikeERC1155(
           });
 
           it("calls onERC1155Received", async function () {
-            await expectEvent.inTransaction(
-              this.transferReceipt.tx,
-              ERC1155Mock,
-              "Received",
-              {
-                operator: multiTokenHolder.address,
-                from: multiTokenHolder.address,
-                id: firstTokenId,
-                value: firstAmount,
-                data,
-              }
-            );
+            expect(this.transferReceipt)
+              .to.emit("Received")
+              .withArgs(
+                multiTokenHolder.address,
+                multiTokenHolder.address,
+                firstTokenId,
+                firstAmount,
+                data
+              );
           });
         });
       });
@@ -770,18 +764,13 @@ function shouldBehaveLikeERC1155(
           });
 
           it("calls onERC1155BatchReceived", async function () {
-            await expectEvent.inTransaction(
-              this.transferReceipt.tx,
-              ERC1155Mock,
-              "BatchReceived",
-              {
-                operator: multiTokenHolder.address,
-                from: multiTokenHolder.address,
-                // ids: [firstTokenId, secondTokenId],
-                // values: [firstAmount, secondAmount],
-                data: null,
-              }
-            );
+            expect(this.transferReceipt)
+              .to.emit("BatchReceived")
+              .withArgs(
+                multiTokenHolder.address,
+                multiTokenHolder.address,
+                null
+              );
           });
         });
 
@@ -809,18 +798,13 @@ function shouldBehaveLikeERC1155(
           });
 
           it("calls onERC1155Received", async function () {
-            await expectEvent.inTransaction(
-              this.transferReceipt.tx,
-              ERC1155Mock,
-              "BatchReceived",
-              {
-                operator: multiTokenHolder,
-                from: multiTokenHolder,
-                // ids: [firstTokenId, secondTokenId],
-                // values: [firstAmount, secondAmount],
-                data,
-              }
-            );
+            expect(this.transferReceipt)
+              .to.emit("BatchReceived")
+              .withArgs(
+                multiTokenHolder.address,
+                multiTokenHolder.address,
+                null
+              );
           });
         });
       });
@@ -905,18 +889,13 @@ function shouldBehaveLikeERC1155(
           });
 
           it("calls onERC1155BatchReceived", async function () {
-            await expectEvent.inTransaction(
-              this.transferReceipt.tx,
-              ERC1155Mock,
-              "BatchReceived",
-              {
-                operator: multiTokenHolder,
-                from: multiTokenHolder,
-                // ids: [firstTokenId, secondTokenId],
-                // values: [firstAmount, secondAmount],
-                data: null,
-              }
-            );
+            expect(this.transferReceipt)
+              .to.emit("BatchReceived")
+              .withArgs(
+                multiTokenHolder.address,
+                multiTokenHolder.address,
+                null
+              );
           });
         }
       );
