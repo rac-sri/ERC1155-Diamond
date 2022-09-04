@@ -527,7 +527,7 @@ function shouldBehaveLikeERC1155(
               firstAmount,
               "0x"
             ),
-            "ERC1155Mock: reverting on receive"
+            "ERC1155ReceiverMock: reverting on receive"
           );
         });
       });
@@ -583,13 +583,12 @@ function shouldBehaveLikeERC1155(
 
       it("reverts when ids array length doesn't match amounts array length", async function () {
         await expectRevert(
-          ERC1155Mock.safeBatchTransferFrom(
+          ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
             multiTokenHolder.address,
             recipient,
             [firstTokenId],
             [firstAmount, secondAmount],
-            "0x",
-            { from: multiTokenHolder }
+            "0x"
           ),
           "ERC1155: ids and amounts length mismatch"
         );
@@ -609,7 +608,7 @@ function shouldBehaveLikeERC1155(
       it("reverts when transferring to zero address", async function () {
         await expectRevert(
           ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
-            multiTokenHolder,
+            multiTokenHolder.address,
             ZERO_ADDRESS,
             [firstTokenId, secondTokenId],
             [firstAmount, secondAmount],
@@ -653,7 +652,7 @@ function shouldBehaveLikeERC1155(
           this.transferLogs = await ERC1155Mock.connect(
             multiTokenHolder
           ).safeBatchTransferFrom(
-            multiTokenHolder,
+            multiTokenHolder.address,
             recipient,
             [firstTokenId, secondTokenId],
             [firstAmount, secondAmount],
@@ -676,15 +675,16 @@ function shouldBehaveLikeERC1155(
             "when operator is not approved by multiTokenHolder",
             function () {
               beforeEach(async function () {
-                await ERC1155Mock.setApprovalForAll(proxy.address, false, {
-                  from: multiTokenHolder,
-                });
+                await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
+                  proxy.address,
+                  false
+                );
               });
 
               it("reverts", async function () {
                 await expectRevert(
-                  ERC1155Mock.from(proxy).safeBatchTransferFrom(
-                    multiTokenHolder,
+                  ERC1155Mock.connect(proxy).safeBatchTransferFrom(
+                    multiTokenHolder.address,
                     recipient,
                     [firstTokenId, secondTokenId],
                     [firstAmount, secondAmount],
@@ -703,7 +703,9 @@ function shouldBehaveLikeERC1155(
                 proxy.address,
                 true
               );
-              this.transferLogs = await ERC1155Mock.safeBatchTransferFrom(
+              this.transferLogs = await ERC1155Mock.connect(
+                proxy
+              ).safeBatchTransferFrom(
                 multiTokenHolder.address,
                 recipient,
                 [firstTokenId, secondTokenId],
@@ -787,13 +789,14 @@ function shouldBehaveLikeERC1155(
           const data = "0xf00dd00d";
           beforeEach(async function () {
             this.toWhom = ERC1155ReceiverMock.address;
-            this.transferReceipt = await ERC1155Mock.safeBatchTransferFrom(
-              multiTokenHolder,
+            this.transferReceipt = await ERC1155Mock.connect(
+              multiTokenHolder
+            ).safeBatchTransferFrom(
+              multiTokenHolder.address,
               ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
-              data,
-              { from: multiTokenHolder }
+              data
             );
             this.transferLogs = this.transferReceipt;
           });
@@ -858,15 +861,14 @@ function shouldBehaveLikeERC1155(
 
         it("reverts", async function () {
           await expectRevert(
-            ERC1155Mock.safeBatchTransferFrom(
+            ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
               multiTokenHolder.address,
               ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
-              "0x",
-              { from: multiTokenHolder }
+              "0x"
             ),
-            "ERC1155Mock: reverting on batch receive"
+            "ERC1155ReceiverMock: reverting on batch receive"
           );
         });
       });
