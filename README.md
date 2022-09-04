@@ -56,8 +56,8 @@ import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 contract Something is ERC1155, OwnableUpgradeable {
 
-    function initialize() initializerERC721A initializer public {
-
+    function initialize(string memory uri_) initializerERC721A initializer public {
+        __ERC1155_init(uri_);
         __Ownable_init();
     }
 

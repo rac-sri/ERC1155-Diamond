@@ -14,7 +14,7 @@ library ERC1155Storage {
     // =============================================================
 
     // Mapping from token ID to account balances
-         mapping(uint256 => mapping(address => uint256))  _balances;
+    mapping(uint256 => mapping(address => uint256))  _balances;
 
     // Mapping from account to operator approvals
     mapping(address => mapping(address => bool))  _operatorApprovals;

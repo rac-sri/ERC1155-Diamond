@@ -6,14 +6,27 @@ import "./interface/IERC1155Receiver.sol";
 import "./interface/IERC1155MetadataURI.sol";
 import "./Address.sol";
 import "./ERC1155Storage.sol";
+import "./ERC1155__Initializable.sol";
 import "./Context.sol";
 import "./ERC165.sol";
 
 
-contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI {
+contract ERC1155 is Context, ERC165, IERC1155, IERC1155MetadataURI, ERC1155__Initializable {
 
     using ERC1155Storage for ERC1155Storage.Layout;
     using Address for address;
+
+    // =============================================================
+    //                          CONSTRUCTOR
+    // =============================================================
+
+    function __ERC1155_init(string memory uri_) internal onlyInitializingERC1155 {
+       __ERC1155_init_unchained(uri_);
+    }
+
+    function __ERC1155_init_unchained(string memory uri_) internal onlyInitializingERC1155 {
+       _setURI(uri_);
+    }
 
     function uri(uint256) public view virtual override returns (string memory) {
         return ERC1155Storage.layout()._uri;
