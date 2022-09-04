@@ -9,8 +9,6 @@ const { ZERO_ADDRESS } = constants;
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { shouldSupportInterfaces } = require("./SupportsInterface.behavior");
-
 let ERC1155Mock;
 let ERC1155ReceiverMock;
 
@@ -918,8 +916,6 @@ function shouldBehaveLikeERC1155(
         }
       );
     });
-
-    shouldSupportInterfaces(["ERC165", "ERC1155"]);
   });
 }
 
