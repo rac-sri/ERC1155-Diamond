@@ -8,5 +8,9 @@
   "dependencies": {
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/test-helpers": "^0.5.15"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rachit2501/ERC1155-Diamond"
   }
 }
