@@ -91,7 +91,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 ## Contact
 
-- RacSri25 ( https://twitter.com/RacSri25 )
+- Rachit - [RacSri25](https://twitter.com/RacSri25)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 
