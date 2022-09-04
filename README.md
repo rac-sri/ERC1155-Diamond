@@ -55,8 +55,10 @@ import "erc1155diamondstorage/ERC1155.sol";
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 contract Something is ERC1155, OwnableUpgradeable {
-
-    function initialize(string memory uri_) initializerERC721A initializer public {
+    // Take note of the initializer modifiers.
+    // - `initializerERC1155` for `ERC1155-Diamond`.
+    // - `initializer` for OpenZeppelin's `OwnableUpgradeable`.
+    function initialize(string memory uri_) initializerERC1155 initializer public {
         __ERC1155_init(uri_);
         __Ownable_init();
     }
