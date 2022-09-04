@@ -12,11 +12,13 @@ const { ethers } = require("hardhat");
 const { shouldSupportInterfaces } = require("./SupportsInterface.behavior");
 
 let ERC1155Mock;
+let ERC1155ReceiverMock;
 
 function shouldBehaveLikeERC1155(
   minter,
   multiTokenHolder,
-  [firstTokenHolder, secondTokenHolder, recipient, proxy]
+  proxy,
+  [firstTokenHolder, secondTokenHolder, recipient]
 ) {
   const firstTokenId = ethers.BigNumber.from(1);
   const secondTokenId = ethers.BigNumber.from(2);
@@ -31,8 +33,11 @@ function shouldBehaveLikeERC1155(
   describe("like an ERC1155", function () {
     beforeEach(async () => {
       ERC1155Mock = await ethers.getContractFactory("ERC1155Mock");
-
+      ERC1155ReceiverMock = await ethers.getContractFactory(
+        "ERC1155ReceiverMock"
+      );
       ERC1155Mock = await ERC1155Mock.deploy();
+      ERC1155ReceiverMock = await ERC1155ReceiverMock.deploy();
     });
     describe("balanceOf", function () {
       it("reverts when queried about the zero address", async function () {
@@ -181,32 +186,36 @@ function shouldBehaveLikeERC1155(
       let receipt;
       beforeEach(async function () {
         receipt = await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
-          proxy,
+          proxy.address,
           true
         );
       });
 
       it("sets approval status which can be queried via isApprovedForAll", async function () {
         expect(
-          await ERC1155Mock.isApprovedForAll(multiTokenHolder.address, proxy)
+          await ERC1155Mock.isApprovedForAll(
+            multiTokenHolder.address,
+            proxy.address
+          )
         ).to.be.equal(true);
       });
 
       it("emits an ApprovalForAll log", function () {
-        expectEvent(receipt, "ApprovalForAll", {
-          account: multiTokenHolder.address,
-          operator: proxy,
-          approved: true,
-        });
+        expect(receipt)
+          .to.emit("ApprovalForAll")
+          .withArgs(multiTokenHolder.address, proxy.address, true);
       });
 
       it("can unset approval for an operator", async function () {
         await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
-          proxy,
+          proxy.address,
           false
         );
         expect(
-          await ERC1155Mock.isApprovedForAll(multiTokenHolder.address, proxy)
+          await ERC1155Mock.isApprovedForAll(
+            multiTokenHolder.address,
+            proxy.address
+          )
         ).to.be.equal(false);
       });
 
@@ -243,7 +252,7 @@ function shouldBehaveLikeERC1155(
             multiTokenHolder.address,
             recipient,
             firstTokenId,
-            firstAmount.addn(1),
+            firstAmount.add(1),
             "0x"
           ),
           "ERC1155: insufficient balance for transfer"
@@ -265,7 +274,7 @@ function shouldBehaveLikeERC1155(
 
       function transferWasSuccessful({ operator, from, id, value }) {
         it("debits transferred balance from sender", async function () {
-          const newBalance = await ERC1155Mock.balanceOf(from, id);
+          const newBalance = await ERC1155Mock.balanceOf(from.address, id);
           expect(newBalance).to.be.equal("0");
         });
 
@@ -275,13 +284,9 @@ function shouldBehaveLikeERC1155(
         });
 
         it("emits a TransferSingle log", function () {
-          expectEvent(this.transferLogs, "TransferSingle", {
-            operator,
-            from,
-            to: this.toWhom,
-            id,
-            value,
-          });
+          expect(this.transferLogs)
+            .to.emit("TransferSingle")
+            .withArgs(operator.address, from.address, this.toWhom, id, value);
         });
       }
 
@@ -300,8 +305,8 @@ function shouldBehaveLikeERC1155(
         });
 
         transferWasSuccessful.call(this, {
-          operator: multiTokenHolder.address,
-          from: multiTokenHolder.address,
+          operator: multiTokenHolder,
+          from: multiTokenHolder,
           id: firstTokenId,
           value: firstAmount,
         });
@@ -329,14 +334,14 @@ function shouldBehaveLikeERC1155(
             function () {
               beforeEach(async function () {
                 await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
-                  proxy,
+                  proxy.address,
                   false
                 );
               });
 
               it("reverts", async function () {
                 await expectRevert(
-                  ERC1155Mock.connect(multiTokenHolder).safeTransferFrom(
+                  ERC1155Mock.connect(proxy).safeTransferFrom(
                     multiTokenHolder.address,
                     recipient,
                     firstTokenId,
@@ -353,18 +358,17 @@ function shouldBehaveLikeERC1155(
             beforeEach(async function () {
               this.toWhom = recipient;
               await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
-                proxy,
+                proxy.address,
                 true
               );
-              this.transferLogs = await ERC1155Mock.safeTransferFrom(
+              this.transferLogs = await ERC1155Mock.connect(
+                proxy
+              ).safeTransferFrom(
                 multiTokenHolder.address,
                 recipient,
                 firstTokenId,
                 firstAmount,
-                "0x",
-                {
-                  from: proxy,
-                }
+                "0x"
               );
             });
 
@@ -376,11 +380,14 @@ function shouldBehaveLikeERC1155(
             });
 
             it("preserves operator's balances not involved in the transfer", async function () {
-              const balance1 = await ERC1155Mock.balanceOf(proxy, firstTokenId);
+              const balance1 = await ERC1155Mock.balanceOf(
+                proxy.address,
+                firstTokenId
+              );
               expect(balance1).to.be.equal("0");
 
               const balance2 = await ERC1155Mock.balanceOf(
-                proxy,
+                proxy.address,
                 secondTokenId
               );
               expect(balance2).to.be.equal("0");
@@ -391,7 +398,7 @@ function shouldBehaveLikeERC1155(
 
       context("when sending to a valid receiver", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             RECEIVER_SINGLE_MAGIC_VALUE,
             false,
             RECEIVER_BATCH_MAGIC_VALUE,
@@ -401,14 +408,15 @@ function shouldBehaveLikeERC1155(
 
         context("without data", function () {
           beforeEach(async function () {
-            this.toWhom = this.receiver.address;
-            this.transferReceipt = await ERC1155Mock.safeTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            this.toWhom = ERC1155ReceiverMock.address;
+            this.transferReceipt = await ERC1155Mock.connect(
+              multiTokenHolder
+            ).safeTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               firstTokenId,
               firstAmount,
-              "0x",
-              { from: multiTokenHolder }
+              "0x"
             );
             this.transferLogs = this.transferReceipt;
           });
@@ -439,14 +447,15 @@ function shouldBehaveLikeERC1155(
         context("with data", function () {
           const data = "0xf00dd00d";
           beforeEach(async function () {
-            this.toWhom = this.receiver.address;
-            this.transferReceipt = await ERC1155Mock.safeTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            this.toWhom = ERC1155ReceiverMock.address;
+            this.transferReceipt = await ERC1155Mock.connect(
+              multiTokenHolder
+            ).safeTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               firstTokenId,
               firstAmount,
-              data,
-              { from: multiTokenHolder }
+              data
             );
             this.transferLogs = this.transferReceipt;
           });
@@ -464,8 +473,8 @@ function shouldBehaveLikeERC1155(
               ERC1155Mock,
               "Received",
               {
-                operator: multiTokenHolder,
-                from: multiTokenHolder,
+                operator: multiTokenHolder.address,
+                from: multiTokenHolder.address,
                 id: firstTokenId,
                 value: firstAmount,
                 data,
@@ -477,7 +486,7 @@ function shouldBehaveLikeERC1155(
 
       context("to a receiver contract returning unexpected value", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             "0x00c0ffee",
             false,
             RECEIVER_BATCH_MAGIC_VALUE,
@@ -487,15 +496,12 @@ function shouldBehaveLikeERC1155(
 
         it("reverts", async function () {
           await expectRevert(
-            ERC1155Mock.safeTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            ERC1155Mock.connect(multiTokenHolder).safeTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               firstTokenId,
               firstAmount,
-              "0x",
-              {
-                from: multiTokenHolder,
-              }
+              "0x"
             ),
             "ERC1155: ERC1155Receiver rejected tokens"
           );
@@ -504,7 +510,7 @@ function shouldBehaveLikeERC1155(
 
       context("to a receiver contract that reverts", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             RECEIVER_SINGLE_MAGIC_VALUE,
             true,
             RECEIVER_BATCH_MAGIC_VALUE,
@@ -514,15 +520,12 @@ function shouldBehaveLikeERC1155(
 
         it("reverts", async function () {
           await expectRevert(
-            ERC1155Mock.safeTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            ERC1155Mock.connect(multiTokenHolder).safeTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               firstTokenId,
               firstAmount,
-              "0x",
-              {
-                from: multiTokenHolder,
-              }
+              "0x"
             ),
             "ERC1155Mock: reverting on receive"
           );
@@ -534,16 +537,14 @@ function shouldBehaveLikeERC1155(
         function () {
           it("reverts", async function () {
             const invalidReceiver = ERC1155Mock;
+
             await expectRevert.unspecified(
-              ERC1155Mock.safeTransferFrom(
-                multiTokenHolder,
+              ERC1155Mock.connect(multiTokenHolder).safeTransferFrom(
+                multiTokenHolder.address,
                 invalidReceiver.address,
                 firstTokenId,
                 firstAmount,
-                "0x",
-                {
-                  from: multiTokenHolder,
-                }
+                "0x"
               )
             );
           });
@@ -554,13 +555,13 @@ function shouldBehaveLikeERC1155(
     describe("safeBatchTransferFrom", function () {
       beforeEach(async function () {
         await ERC1155Mock.connect(minter).mint(
-          multiTokenHolder,
+          multiTokenHolder.address,
           firstTokenId,
           firstAmount,
           "0x"
         );
         await ERC1155Mock.connect(minter).mint(
-          multiTokenHolder,
+          multiTokenHolder.address,
           secondTokenId,
           secondAmount,
           "0x"
@@ -569,13 +570,12 @@ function shouldBehaveLikeERC1155(
 
       it("reverts when transferring amount more than any of balances", async function () {
         await expectRevert(
-          ERC1155Mock.safeBatchTransferFrom(
-            multiTokenHolder,
+          ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
+            multiTokenHolder.address,
             recipient,
             [firstTokenId, secondTokenId],
-            [firstAmount, secondAmount.addn(1)],
-            "0x",
-            { from: multiTokenHolder }
+            [firstAmount, secondAmount.add(1)],
+            "0x"
           ),
           "ERC1155: insufficient balance for transfer"
         );
@@ -584,7 +584,7 @@ function shouldBehaveLikeERC1155(
       it("reverts when ids array length doesn't match amounts array length", async function () {
         await expectRevert(
           ERC1155Mock.safeBatchTransferFrom(
-            multiTokenHolder,
+            multiTokenHolder.address,
             recipient,
             [firstTokenId],
             [firstAmount, secondAmount],
@@ -595,13 +595,12 @@ function shouldBehaveLikeERC1155(
         );
 
         await expectRevert(
-          ERC1155Mock.safeBatchTransferFrom(
-            multiTokenHolder,
+          ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
+            multiTokenHolder.address,
             recipient,
             [firstTokenId, secondTokenId],
             [firstAmount],
-            "0x",
-            { from: multiTokenHolder }
+            "0x"
           ),
           "ERC1155: ids and amounts length mismatch"
         );
@@ -609,13 +608,12 @@ function shouldBehaveLikeERC1155(
 
       it("reverts when transferring to zero address", async function () {
         await expectRevert(
-          ERC1155Mock.safeBatchTransferFrom(
+          ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
             multiTokenHolder,
             ZERO_ADDRESS,
             [firstTokenId, secondTokenId],
             [firstAmount, secondAmount],
-            "0x",
-            { from: multiTokenHolder }
+            "0x"
           ),
           "ERC1155: transfer to the zero address"
         );
@@ -624,7 +622,7 @@ function shouldBehaveLikeERC1155(
       function batchTransferWasSuccessful({ operator, from, ids, values }) {
         it("debits transferred balances from sender", async function () {
           const newBalances = await ERC1155Mock.balanceOfBatch(
-            new Array(ids.length).fill(from),
+            new Array(ids.length).fill(from.address),
             ids
           );
           for (const newBalance of newBalances) {
@@ -643,26 +641,23 @@ function shouldBehaveLikeERC1155(
         });
 
         it("emits a TransferBatch log", function () {
-          expectEvent(this.transferLogs, "TransferBatch", {
-            operator,
-            from,
-            to: this.toWhom,
-            // ids,
-            // values,
-          });
+          expect(this.transferLogs)
+            .to.emit("TransferBatch")
+            .withArgs(operator.address, from.address, this.toWhom);
         });
       }
 
       context("when called by the multiTokenHolder", async function () {
         beforeEach(async function () {
           this.toWhom = recipient;
-          this.transferLogs = await ERC1155Mock.safeBatchTransferFrom(
+          this.transferLogs = await ERC1155Mock.connect(
+            multiTokenHolder
+          ).safeBatchTransferFrom(
             multiTokenHolder,
             recipient,
             [firstTokenId, secondTokenId],
             [firstAmount, secondAmount],
-            "0x",
-            { from: multiTokenHolder }
+            "0x"
           );
         });
 
@@ -681,20 +676,19 @@ function shouldBehaveLikeERC1155(
             "when operator is not approved by multiTokenHolder",
             function () {
               beforeEach(async function () {
-                await ERC1155Mock.setApprovalForAll(proxy, false, {
+                await ERC1155Mock.setApprovalForAll(proxy.address, false, {
                   from: multiTokenHolder,
                 });
               });
 
               it("reverts", async function () {
                 await expectRevert(
-                  ERC1155Mock.safeBatchTransferFrom(
+                  ERC1155Mock.from(proxy).safeBatchTransferFrom(
                     multiTokenHolder,
                     recipient,
                     [firstTokenId, secondTokenId],
                     [firstAmount, secondAmount],
-                    "0x",
-                    { from: proxy }
+                    "0x"
                   ),
                   "ERC1155: caller is not token owner or approved"
                 );
@@ -705,16 +699,16 @@ function shouldBehaveLikeERC1155(
           context("when operator is approved by multiTokenHolder", function () {
             beforeEach(async function () {
               this.toWhom = recipient;
-              await ERC1155Mock.setApprovalForAll(proxy, true, {
-                from: multiTokenHolder,
-              });
+              await ERC1155Mock.connect(multiTokenHolder).setApprovalForAll(
+                proxy.address,
+                true
+              );
               this.transferLogs = await ERC1155Mock.safeBatchTransferFrom(
-                multiTokenHolder,
+                multiTokenHolder.address,
                 recipient,
                 [firstTokenId, secondTokenId],
                 [firstAmount, secondAmount],
-                "0x",
-                { from: proxy }
+                "0x"
               );
             });
 
@@ -726,10 +720,13 @@ function shouldBehaveLikeERC1155(
             });
 
             it("preserves operator's balances not involved in the transfer", async function () {
-              const balance1 = await ERC1155Mock.balanceOf(proxy, firstTokenId);
+              const balance1 = await ERC1155Mock.balanceOf(
+                proxy.address,
+                firstTokenId
+              );
               expect(balance1).to.be.equal("0");
               const balance2 = await ERC1155Mock.balanceOf(
-                proxy,
+                proxy.address,
                 secondTokenId
               );
               expect(balance2).to.be.equal("0");
@@ -740,7 +737,7 @@ function shouldBehaveLikeERC1155(
 
       context("when sending to a valid receiver", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             RECEIVER_SINGLE_MAGIC_VALUE,
             false,
             RECEIVER_BATCH_MAGIC_VALUE,
@@ -750,14 +747,15 @@ function shouldBehaveLikeERC1155(
 
         context("without data", function () {
           beforeEach(async function () {
-            this.toWhom = this.receiver.address;
-            this.transferReceipt = await ERC1155Mock.safeBatchTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            this.toWhom = ERC1155ReceiverMock.address;
+            this.transferReceipt = await ERC1155Mock.connect(
+              multiTokenHolder
+            ).safeBatchTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
-              "0x",
-              { from: multiTokenHolder }
+              "0x"
             );
             this.transferLogs = this.transferReceipt;
           });
@@ -775,8 +773,8 @@ function shouldBehaveLikeERC1155(
               ERC1155Mock,
               "BatchReceived",
               {
-                operator: multiTokenHolder,
-                from: multiTokenHolder,
+                operator: multiTokenHolder.address,
+                from: multiTokenHolder.address,
                 // ids: [firstTokenId, secondTokenId],
                 // values: [firstAmount, secondAmount],
                 data: null,
@@ -788,10 +786,10 @@ function shouldBehaveLikeERC1155(
         context("with data", function () {
           const data = "0xf00dd00d";
           beforeEach(async function () {
-            this.toWhom = this.receiver.address;
+            this.toWhom = ERC1155ReceiverMock.address;
             this.transferReceipt = await ERC1155Mock.safeBatchTransferFrom(
               multiTokenHolder,
-              this.receiver.address,
+              ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
               data,
@@ -826,7 +824,7 @@ function shouldBehaveLikeERC1155(
 
       context("to a receiver contract returning unexpected value", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             RECEIVER_SINGLE_MAGIC_VALUE,
             false,
             RECEIVER_SINGLE_MAGIC_VALUE,
@@ -836,13 +834,12 @@ function shouldBehaveLikeERC1155(
 
         it("reverts", async function () {
           await expectRevert(
-            ERC1155Mock.safeBatchTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
-              "0x",
-              { from: multiTokenHolder }
+              "0x"
             ),
             "ERC1155: ERC1155Receiver rejected tokens"
           );
@@ -851,7 +848,7 @@ function shouldBehaveLikeERC1155(
 
       context("to a receiver contract that reverts", function () {
         beforeEach(async function () {
-          this.receiver = await ERC1155Mock.initialize(
+          await ERC1155ReceiverMock.initialize(
             RECEIVER_SINGLE_MAGIC_VALUE,
             false,
             RECEIVER_BATCH_MAGIC_VALUE,
@@ -862,8 +859,8 @@ function shouldBehaveLikeERC1155(
         it("reverts", async function () {
           await expectRevert(
             ERC1155Mock.safeBatchTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
               "0x",
@@ -878,21 +875,22 @@ function shouldBehaveLikeERC1155(
         "to a receiver contract that reverts only on single transfers",
         function () {
           beforeEach(async function () {
-            this.receiver = await ERC1155Mock.initialize(
+            await ERC1155ReceiverMock.initialize(
               RECEIVER_SINGLE_MAGIC_VALUE,
               true,
               RECEIVER_BATCH_MAGIC_VALUE,
               false
             );
 
-            this.toWhom = this.receiver.address;
-            this.transferReceipt = await ERC1155Mock.safeBatchTransferFrom(
-              multiTokenHolder,
-              this.receiver.address,
+            this.toWhom = ERC1155ReceiverMock.address;
+            this.transferReceipt = await ERC1155Mock.connect(
+              multiTokenHolder
+            ).safeBatchTransferFrom(
+              multiTokenHolder.address,
+              ERC1155ReceiverMock.address,
               [firstTokenId, secondTokenId],
               [firstAmount, secondAmount],
-              "0x",
-              { from: multiTokenHolder }
+              "0x"
             );
             this.transferLogs = this.transferReceipt;
           });
@@ -927,13 +925,12 @@ function shouldBehaveLikeERC1155(
           it("reverts", async function () {
             const invalidReceiver = ERC1155Mock;
             await expectRevert.unspecified(
-              ERC1155Mock.safeBatchTransferFrom(
-                multiTokenHolder,
+              ERC1155Mock.connect(multiTokenHolder).safeBatchTransferFrom(
+                multiTokenHolder.address,
                 invalidReceiver.address,
                 [firstTokenId, secondTokenId],
                 [firstAmount, secondAmount],
-                "0x",
-                { from: multiTokenHolder }
+                "0x"
               )
             );
           });

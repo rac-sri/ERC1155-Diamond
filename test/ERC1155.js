@@ -15,7 +15,7 @@ const { shouldBehaveLikeERC1155 } = require("./ERC1155.behavior");
 describe("ERC1155", () => {
   let ERC1155Mock;
   let accounts = [];
-  let signer, signer2;
+  let signer, signer2, signer3;
   let operator, tokenHolder, tokenBatchHolder, otherAccounts;
 
   const initialURI = "https://token-cdn-domain/{id}.json";
@@ -23,7 +23,7 @@ describe("ERC1155", () => {
   beforeEach(async function () {
     ERC1155Mock = await ethers.getContractFactory("ERC1155Mock");
     const accountSigners = await ethers.getSigners();
-    [signer, signer2] = accountSigners;
+    [signer, signer2, signer3] = accountSigners;
     for (let i = 0; i < accountSigners.length; ++i) {
       accounts.push(await accountSigners[i].getAddress());
     }
@@ -301,6 +301,6 @@ describe("ERC1155", () => {
   });
 
   it("should behave like erc 1155", () => {
-    shouldBehaveLikeERC1155(signer, signer2, otherAccounts);
+    shouldBehaveLikeERC1155(signer, signer2, signer3, otherAccounts);
   });
 });
