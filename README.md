@@ -38,7 +38,7 @@ It follows all of the rules for [Writing Upgradeable Contracts]: constructors ar
 
 ```sh
 
-npm install --save-dev erc721a-upgradeable
+npm i erc1155diamondstorage
 
 ```
 
@@ -51,6 +51,7 @@ Once installed, you can use the contracts in the library by importing them:
 ```solidity
 pragma solidity ^0.8.4;
 
+import "erc1155diamondstorage/ERC1155.sol";
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 contract Something is ERC1155, OwnableUpgradeable {
