@@ -54,7 +54,7 @@ Once installed, you can use the contracts in the library by importing them:
 ```solidity
 pragma solidity ^0.8.4;
 
-import "erc1155diamondstorage/ERC1155.sol";
+import "erc1155diamondstorage/contracts/ERC1155.sol";
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
 contract Something is ERC1155, OwnableUpgradeable {
