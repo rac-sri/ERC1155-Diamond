@@ -10,6 +10,9 @@
 <!-- [![Forks][forks-shield]][forks-url] -->
 <!-- [![Stargazers][stars-shield]][stars-url] -->
 
+## Installation
+`npm i erc1155diamondstorage`
+
 ## About The Project
 
 This repository hosts the Upgradeable variant of [ERC1155](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC1155/ERC1155.sol), meant for use in upgradeable contracts. This variant is available as separate package called `EIP1155-Diamond`.
