@@ -17,7 +17,7 @@ describe("ERC1155Burnable", function () {
       "ERC1155BurnableMock"
     );
 
-    this.token = await ERC1155BurnableMock.deploy(uri);
+    this.token = await ERC1155BurnableMock.deploy();
 
     await this.token.mint(holder.address, tokenIds[0], amounts[0], "0x");
     await this.token.mint(holder.address, tokenIds[1], amounts[1], "0x");
