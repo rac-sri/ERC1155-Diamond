@@ -19,8 +19,19 @@ library ERC1155Storage {
     // Mapping from account to operator approvals
     mapping(address => mapping(address => bool))  _operatorApprovals;
 
+    mapping(uint256 => uint256)  _totalSupply;
+
+
+    bool _paused;
+
     // Used as the URI for all token types by relying on ID substitution, e.g. https://token-cdn-domain/{id}.json
     string  _uri;
+
+    // Optional base URI
+    string _baseURI;
+
+    // Optional mapping for token URIs
+    mapping(uint256 => string)  _tokenURIs;
     }
 
     bytes32 internal constant STORAGE_SLOT = keccak256('ERC1155.contracts.storage.ERC1155');
